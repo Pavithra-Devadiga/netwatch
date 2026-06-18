@@ -1,41 +1,37 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Wifi } from "lucide-react";
 
 export default function ScanOverlay() {
   return (
     <motion.div
-      className="scan-overlay"
+      className="overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="scan-modal"
-        initial={{ scale: 0.9, opacity: 0 }}
+        className="overlay-box"
+        initial={{ scale: 0.85, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
+        exit={{ scale: 0.85, opacity: 0 }}
       >
-        <div className="scan-rings">
-          <div className="scan-ring" />
-          <div className="scan-ring" />
-          <div className="scan-ring" />
-          <div className="scan-dot" />
+        <div className="radar">
+          <div className="radar-ring" />
+          <div className="radar-ring" />
+          <div className="radar-ring" />
+          <div className="radar-center">
+            <div className="radar-dot">
+              <Wifi size={14} color="#fff" />
+            </div>
+          </div>
         </div>
-        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Scanning Network</div>
-        <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-          Discovering devices on your local network...
+        <div className="overlay-title">Scanning Nearby WiFi</div>
+        <div className="overlay-sub">
+          Discovering networks · Analyzing encryption<br />
+          Detecting threats &amp; evil twins
         </div>
-        <div style={{
-          marginTop: 20,
-          padding: "8px 16px",
-          background: "var(--bg-secondary)",
-          borderRadius: 8,
-          fontFamily: "var(--mono)",
-          fontSize: 12,
-          color: "var(--accent)",
-        }}>
-          nmap -sn 192.168.x.x/24
-        </div>
+        <div className="overlay-cmd">$ nmcli device wifi list --rescan yes</div>
       </motion.div>
     </motion.div>
   );

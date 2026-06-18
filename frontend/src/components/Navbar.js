@@ -1,50 +1,45 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Shield, Sun, Moon, Scan, Wifi } from "lucide-react";
+import { Shield, Sun, Moon, Wifi, Radio } from "lucide-react";
 
-export default function Navbar({ theme, setTheme, onScan, scanning, localIp }) {
+export default function Navbar({ theme, setTheme, onScan, scanning, backendOnline }) {
   return (
-    <nav className="navbar">
-      <div className="navbar-brand">
-        <div className="brand-icon">
-          <Shield size={18} color="#fff" strokeWidth={2.5} />
+    <nav className="nav">
+      <div className="nav-logo">
+        <div className="nav-icon">
+          <Shield size={17} color="#fff" strokeWidth={2.5} />
         </div>
-        <span className="brand-name">NetWatch</span>
-        <span className="brand-badge">Live</span>
+        <span className="nav-name">NetWatch</span>
+        <span className="nav-tag">WiFi Intel</span>
       </div>
 
-      <div className="navbar-right">
-        {localIp && (
-          <div className="ip-badge">
-            <Wifi size={12} style={{ display: "inline", marginRight: 5, verticalAlign: "middle" }} />
-            {localIp}
-          </div>
-        )}
+      <div className="nav-right">
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: backendOnline ? "var(--safe)" : "var(--danger)" }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: backendOnline ? "var(--safe)" : "var(--danger)", display: "inline-block" }} />
+          {backendOnline ? "Backend Live" : "Backend Offline"}
+        </div>
 
         <motion.button
           className="btn btn-primary"
           onClick={onScan}
           disabled={scanning}
-          whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.96 }}
         >
           <motion.div
             animate={scanning ? { rotate: 360 } : { rotate: 0 }}
             transition={scanning ? { duration: 1.5, repeat: Infinity, ease: "linear" } : {}}
           >
-            <Scan size={14} />
+            <Radio size={14} />
           </motion.div>
-          {scanning ? "Scanning..." : "Scan Network"}
+          {scanning ? "Scanning..." : "Scan WiFi"}
         </motion.button>
 
         <button
-          className="theme-toggle"
+          className="icon-btn"
           onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
           title="Toggle theme"
         >
-          {theme === "dark"
-            ? <Sun size={16} />
-            : <Moon size={16} />
-          }
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
         </button>
       </div>
     </nav>

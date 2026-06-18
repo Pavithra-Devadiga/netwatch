@@ -1,82 +1,91 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Toaster, toast } from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
-import Dashboard from "./pages/Dashboard";
-import DeviceDetail from "./pages/DeviceDetail";
+import { AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import DetailPage from "./pages/DetailPage";
 import ScanOverlay from "./components/ScanOverlay";
-import "./index.css";
 import Footer from "./components/Footer";
+import "./index.css";
 
-const API = "http://localhost:5000/api";
+const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("nw-theme") || "dark");
-  const [devices, setDevices] = useState([]);
+  const [networks, setNetworks] = useState([]);
+  const [stats, setStats] = useState({ total: 0, danger: 0, warning: 0, safe: 0, evil_twins: 0 });
   const [scanning, setScanning] = useState(false);
   const [lastScan, setLastScan] = useState(null);
-  const [stats, setStats] = useState({ total: 0, threats: 0, warnings: 0 });
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [localIp, setLocalIp] = useState("");
+  const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [backendOnline, setBackendOnline] = useState(true);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("nw-theme", theme);
   }, [theme]);
 
-  const fetchDevices = useCallback(async () => {
+  const fetchNetworks = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/devices`);
-      setDevices(res.data.devices || []);
+      const res = await axios.get(`${API}/networks`, { timeout: 5000 });
+      setNetworks(res.data.networks || []);
+      setStats({
+        total: res.data.total || 0,
+        danger: res.data.danger || 0,
+        warning: res.data.warning || 0,
+        safe: res.data.safe || 0,
+        evil_twins: res.data.evil_twins || 0,
+      });
+      setScanning(res.data.scanning || false);
       setLastScan(res.data.last_scan);
-      setScanning(res.data.scanning);
-      setStats({ total: res.data.total, threats: res.data.threats, warnings: res.data.warnings });
-      setLocalIp(res.data.local_ip || "");
+      setBackendOnline(true);
     } catch {
-      toast.error("Backend offline — run app.py first");
+      setBackendOnline(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchDevices();
-    const interval = setInterval(fetchDevices, 5000);
-    return () => clearInterval(interval);
-  }, [fetchDevices]);
+    fetchNetworks();
+    const iv = setInterval(fetchNetworks, 4000);
+    return () => clearInterval(iv);
+  }, [fetchNetworks]);
 
   const triggerScan = async () => {
+    if (scanning) return;
     try {
       setScanning(true);
-      await axios.post(`${API}/scan`);
-      toast.success("Network scan started");
-      setTimeout(fetchDevices, 3000);
-      setTimeout(fetchDevices, 8000);
-      setTimeout(fetchDevices, 15000);
+      await axios.post(`${API}/scan`, {}, { timeout: 5000 });
+      toast.success("🔍 Scanning nearby WiFi networks...", { duration: 3000 });
+      setTimeout(fetchNetworks, 3000);
+      setTimeout(fetchNetworks, 8000);
+      setTimeout(fetchNetworks, 15000);
     } catch {
-      toast.error("Could not start scan");
+      toast.error("Backend offline — run: python app.py");
       setScanning(false);
     }
   };
 
-  const filteredDevices = devices.filter(d => {
+  const filtered = networks.filter(n => {
     if (filter === "all") return true;
-    if (filter === "threats") return d.threat_level === "danger";
-    if (filter === "warnings") return d.threat_level === "warning";
-    if (filter === "safe") return d.threat_level === "safe";
+    if (filter === "danger") return n.threat_level === "danger";
+    if (filter === "warning") return n.threat_level === "warning";
+    if (filter === "safe") return n.threat_level === "safe";
+    if (filter === "open") return n.encryption === "NONE" || n.encryption === "OPEN";
     return true;
   });
 
   return (
-    <div className="app">
+    <div className="app-root">
       <Toaster
         position="top-right"
         toastOptions={{
           style: {
-            background: "var(--card-bg)",
-            color: "var(--text-primary)",
-            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--t1)",
+            border: "1px solid var(--border2)",
             borderRadius: "12px",
+            fontSize: "13px",
           },
         }}
       />
@@ -85,34 +94,35 @@ export default function App() {
         setTheme={setTheme}
         onScan={triggerScan}
         scanning={scanning}
-        localIp={localIp}
+        backendOnline={backendOnline}
       />
+
       <AnimatePresence mode="wait">
-        {selectedDevice ? (
-          <DeviceDetail
+        {selected ? (
+          <DetailPage
             key="detail"
-            device={selectedDevice}
-            onBack={() => setSelectedDevice(null)}
-            theme={theme}
+            network={selected}
+            onBack={() => setSelected(null)}
           />
         ) : (
           <Dashboard
-            key="dashboard"
-            devices={filteredDevices}
-            allDevices={devices}
+            key="dash"
+            networks={filtered}
+            allNetworks={networks}
             stats={stats}
             lastScan={lastScan}
             scanning={scanning}
             onScan={triggerScan}
-            onSelect={setSelectedDevice}
+            onSelect={setSelected}
             filter={filter}
             setFilter={setFilter}
-            localIp={localIp}
+            backendOnline={backendOnline}
           />
         )}
       </AnimatePresence>
-      <AnimatePresence>{scanning && <ScanOverlay />}</AnimatePresence>
+
       <Footer />
+      <AnimatePresence>{scanning && <ScanOverlay />}</AnimatePresence>
     </div>
   );
 }

@@ -1,126 +1,152 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Shield, AlertTriangle, Wifi, CheckCircle, Clock } from "lucide-react";
-import NetworkMap from "../components/NetworkMap";
-import DeviceCard from "../components/DeviceCard";
+import { Radio, AlertTriangle, ShieldAlert, ShieldCheck, Wifi, WifiOff, Clock, Zap } from "lucide-react";
+import NetworkCard from "../components/NetworkCard";
 
-function fmt(iso) {
+function fmtTime(iso) {
   if (!iso) return "Never";
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-export default function Dashboard({
-  devices, allDevices, stats, lastScan, scanning,
-  onScan, onSelect, filter, setFilter, localIp
-}) {
+export default function Dashboard({ networks, allNetworks, stats, lastScan, scanning, onScan, onSelect, filter, setFilter, backendOnline }) {
+
+  const evilTwins = allNetworks.filter(n => n.evil_twin);
+
   return (
     <motion.div
-      className="main"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
     >
-      {/* Stats */}
-      <div className="stats-grid">
-        <motion.div className="stat-card" whileHover={{ y: -2 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-          <div className="stat-label"><Wifi size={11} style={{ display: "inline", marginRight: 5 }} />Total Devices</div>
-          <div className="stat-value">{stats.total}</div>
-          <div className="stat-sub">{localIp ? `On ${localIp.split(".").slice(0,3).join(".")}.x` : "Local network"}</div>
-        </motion.div>
-
-        <motion.div className="stat-card danger" whileHover={{ y: -2 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <div className="stat-label"><AlertTriangle size={11} style={{ display: "inline", marginRight: 5 }} />Threats</div>
-          <div className="stat-value">{stats.threats}</div>
-          <div className="stat-sub">{stats.threats === 0 ? "Network clear" : "Immediate attention"}</div>
-        </motion.div>
-
-        <motion.div className="stat-card warning" whileHover={{ y: -2 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-label"><Shield size={11} style={{ display: "inline", marginRight: 5 }} />Warnings</div>
-          <div className="stat-value">{stats.warnings}</div>
-          <div className="stat-sub">Needs review</div>
-        </motion.div>
-
-        <motion.div className="stat-card safe" whileHover={{ y: -2 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <div className="stat-label"><CheckCircle size={11} style={{ display: "inline", marginRight: 5 }} />Safe</div>
-          <div className="stat-value">{stats.total - stats.threats - stats.warnings}</div>
-          <div className="stat-sub">
-            <Clock size={10} style={{ display: "inline", marginRight: 4 }} />
-            Last scan: {fmt(lastScan)}
+      {/* ── HERO ── */}
+      <div className="hero">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <div className="hero-badge">
+            <Radio size={12} />
+            Real-Time WiFi Threat Intelligence
+          </div>
+          <h1 className="hero-title">
+            Is Your WiFi<br /><span>Safe to Connect?</span>
+          </h1>
+          <p className="hero-sub">
+            NetWatch scans nearby WiFi networks, analyzes encryption, detects rogue access points,
+            evil twin attacks, and open honeypots — in real time.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <motion.button className="btn btn-primary" onClick={onScan} disabled={scanning} whileTap={{ scale: 0.96 }} style={{ padding: "11px 28px", fontSize: 14 }}>
+              <motion.div animate={scanning ? { rotate: 360 } : {}} transition={scanning ? { duration: 1.5, repeat: Infinity, ease: "linear" } : {}}>
+                <Radio size={15} />
+              </motion.div>
+              {scanning ? "Scanning Networks..." : "Scan Nearby WiFi"}
+            </motion.button>
+            {lastScan && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--t2)", background: "var(--card)", border: "1px solid var(--border)", padding: "8px 16px", borderRadius: 10 }}>
+                <Clock size={12} />
+                Last scan: {fmtTime(lastScan)}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
 
-      {/* Network Map */}
-      {allDevices.length > 0 && (
-        <motion.div
-          className="network-map-container"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="network-map-header">
-            <span className="section-title">Network Topology</span>
-            <div style={{ display: "flex", gap: 8 }}>
-              <span style={{ fontSize: 12, color: "var(--safe)", display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--safe)", display: "inline-block" }} /> Safe
-              </span>
-              <span style={{ fontSize: 12, color: "var(--warning)", display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--warning)", display: "inline-block" }} /> Warning
-              </span>
-              <span style={{ fontSize: 12, color: "var(--danger)", display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--danger)", display: "inline-block" }} /> Threat
+      {/* ── STATS BAR ── */}
+      <div className="stats-bar">
+        {[
+          { label: "Networks Found", value: stats.total, cls: "", icon: <Wifi size={12} />, hint: "In scan range" },
+          { label: "Threats", value: stats.danger, cls: "red", icon: <ShieldAlert size={12} />, hint: stats.danger > 0 ? "Avoid these!" : "All clear" },
+          { label: "Warnings", value: stats.warning, cls: "amber", icon: <AlertTriangle size={12} />, hint: "Review before connecting" },
+          { label: "Evil Twins", value: stats.evil_twins, cls: stats.evil_twins > 0 ? "red" : "", icon: <Zap size={12} />, hint: stats.evil_twins > 0 ? "Fake networks detected!" : "None detected" },
+        ].map((s, i) => (
+          <motion.div key={s.label} className="stat" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}>
+            <div className="stat-label">{s.icon}{s.label}</div>
+            <div className={`stat-num ${s.cls}`}>{s.value}</div>
+            <div className="stat-hint">{s.hint}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ── MAIN ── */}
+      <div className="main">
+
+        {/* Backend offline notice */}
+        {!backendOnline && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{
+            background: "var(--warning-bg)", border: "1px solid var(--warning-border)",
+            borderRadius: "var(--radius)", padding: "1rem 1.25rem", marginBottom: "1.5rem",
+            display: "flex", alignItems: "center", gap: 12, fontSize: 13,
+          }}>
+            <WifiOff size={18} color="var(--warning)" />
+            <div>
+              <strong style={{ color: "var(--warning)" }}>Backend not running.</strong>
+              <span style={{ color: "var(--t2)", marginLeft: 8 }}>
+                Open terminal → <code style={{ background: "var(--bg2)", padding: "1px 6px", borderRadius: 4 }}>cd backend && python app.py</code>
               </span>
             </div>
-          </div>
-          <NetworkMap devices={allDevices} onSelect={onSelect} />
-        </motion.div>
-      )}
+          </motion.div>
+        )}
 
-      {/* Device list */}
-      <div className="section-header">
-        <span className="section-title">Devices ({devices.length})</span>
-        <div className="filter-tabs">
-          {["all", "threats", "warnings", "safe"].map(f => (
-            <button
-              key={f}
-              className={`filter-tab ${filter === f ? "active" : ""}`}
-              onClick={() => setFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+        {/* Evil twin global alert */}
+        {evilTwins.length > 0 && (
+          <motion.div className="evil-alert" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+            <div className="evil-alert-icon">🚨</div>
+            <div>
+              <div className="evil-alert-title">EVIL TWIN ATTACK DETECTED — {evilTwins.length} Duplicate Network{evilTwins.length > 1 ? "s" : ""}</div>
+              <div className="evil-alert-desc">
+                Two or more networks share the same name. One is fake — designed to intercept your traffic, steal passwords, and spy on your browsing. <strong style={{ color: "var(--danger)" }}>Do NOT connect to any network named: {[...new Set(evilTwins.map(e => e.ssid))].join(", ")}</strong>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Section header + filters */}
+        <div className="sec-head">
+          <div className="sec-title">
+            <ShieldCheck size={16} style={{ color: "var(--accent)" }} />
+            Nearby Networks <span>({networks.length})</span>
+          </div>
+          <div className="tabs">
+            {[
+              { k: "all", l: "All" },
+              { k: "danger", l: "🔴 Threats" },
+              { k: "warning", l: "⚡ Warnings" },
+              { k: "safe", l: "✓ Safe" },
+              { k: "open", l: "🔓 Open" },
+            ].map(t => (
+              <button key={t.k} className={`tab ${filter === t.k ? "on" : ""}`} onClick={() => setFilter(t.k)}>
+                {t.l}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Network grid */}
+        {networks.length === 0 ? (
+          <div className="empty">
+            <div className="empty-icon">📡</div>
+            <div className="empty-t">{scanning ? "Scanning nearby networks..." : "No networks found"}</div>
+            <div className="empty-s">
+              {scanning
+                ? "This usually takes 10–20 seconds. Using nmcli to scan..."
+                : backendOnline
+                  ? "Click 'Scan Nearby WiFi' to discover networks in your area."
+                  : "Start the Python backend first, then scan."
+              }
+            </div>
+            {!scanning && backendOnline && (
+              <button className="btn btn-primary" onClick={onScan} style={{ margin: "0 auto" }}>
+                <Radio size={14} /> Scan Now
+              </button>
+            )}
+          </div>
+        ) : (
+          <motion.div className="net-grid" layout>
+            {networks.map((net, i) => (
+              <NetworkCard key={`${net.ssid}-${net.bssid}`} network={net} index={i} onClick={onSelect} />
+            ))}
+          </motion.div>
+        )}
       </div>
-
-      {devices.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📡</div>
-          <div className="empty-title">
-            {scanning ? "Scanning your network..." : "No devices found"}
-          </div>
-          <div className="empty-desc">
-            {scanning ? "This usually takes 10–20 seconds." : "Click 'Scan Network' to discover devices."}
-          </div>
-          {!scanning && (
-            <button className="btn btn-primary" style={{ margin: "1.5rem auto 0", display: "flex" }} onClick={onScan}>
-              Scan Now
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="device-grid">
-          {devices.map((device, i) => (
-            <DeviceCard
-              key={device.ip}
-              device={device}
-              index={i}
-              onClick={onSelect}
-            />
-          ))}
-        </div>
-      )}
     </motion.div>
   );
 }
